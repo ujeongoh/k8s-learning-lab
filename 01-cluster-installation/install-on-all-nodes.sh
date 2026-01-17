@@ -2,7 +2,7 @@
 
 # Configuration
 NODES=("k8s-master" "k8s-worker1" "k8s-worker2")
-SCRIPT_PATH="common-setup.sh"
+SCRIPT_PATH="01-cluster-installation/common-setup.sh"
 REMOTE_PATH="/home/ubuntu/common-setup.sh"
 
 # Check if script exists
