@@ -1,0 +1,58 @@
+# [1] fake worker service (to reduce resource)
+# if frontend app looks for "redis-worker", actually guide to "redis-master" pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-worker  # app is looking for this name
+  labels:
+    app: redis
+    role: worker
+spec:
+  ports:
+  - port: 6379
+  selector:
+    app: redis
+    role: master     # <--- [!] actually points to the master pod!
+  type: ClusterIP
+
+---
+# [2] frontend pod (PHP Guestbook)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 3        # pods to 3 for load balancing test
+  selector:
+    matchLabels:
+      app: guestbook
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: guestbook
+        tier: frontend
+    spec:
+      containers:
+      - name: php-redis
+        image: nginx:alpine
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 80
+---
+# [3] frontend service (internal)
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: guestbook
+    tier: frontend
+  type: ClusterIP   # using Ingress to expose it, so using ClusterIP instead of NodePort
