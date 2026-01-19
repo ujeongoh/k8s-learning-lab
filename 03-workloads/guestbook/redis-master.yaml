@@ -1,0 +1,46 @@
+# [Part 1] Redis pod administrator (Deployment)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-master
+  labels:
+    app: redis
+    role: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels: # "I'll manage pods with these labels"
+      app: redis
+      role: master
+  template:
+    metadata:
+      labels: # labels to attach to the pod
+        app: redis
+        role: master
+    spec:
+      containers:
+      - name: master
+        image: redis:7.0.5-alpine
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 6379
+---
+# [Part 2] Redis endpoint (Service)
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-master # [!] we access frontend app with this name!
+  labels:
+    app: redis
+    role: master
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector: # "I'll route packets to pods with these labels" (what kube-proxy sees)
+    app: redis
+    role: master
+  type: ClusterIP # no external exposure (DB, so only internal access)
