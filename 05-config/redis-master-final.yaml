@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-master
+  labels:
+    app: redis
+    role: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+      role: master
+  template:
+    metadata:
+      labels:
+        app: redis
+        role: master
+    spec:
+      # [maintain Phase 4] fix pod to Worker 1 (data is only on that node)
+      nodeSelector:
+        kubernetes.io/hostname: k8s-worker1
+      containers:
+      - name: master
+        image: redis:7.0.5-alpine
+        # [New] change command to use custom config file
+        command: ["redis-server"]
+        args: ["/redis-master/redis.conf"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 6379
+
+        # [New] inject secret (REDIS_PASSWORD)
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: redis-password
+
+        # [New] Mount both ConfigMap and PVC
+        volumeMounts:
+        - mountPath: /data            # [Phase 4] data storage path
+          name: redis-data
+        - mountPath: /redis-master    # [Phase 5] configuration file path
+          name: config
+          
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc        
+      - name: config
+        configMap:
+          name: redis-config          # [Phase 5] connect ConfigMap
+          items:
+          - key: redis.conf
+            path: redis.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-master
+  labels:
+    app: redis
+    role: master
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: redis
+    role: master
+  type: ClusterIP

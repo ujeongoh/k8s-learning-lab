@@ -1,0 +1,21 @@
+# [1] ConfigMap: Redis configuration file
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+data:
+  redis.conf: |
+    maxmemory 256mb
+    maxmemory-policy allkeys-lru
+  # write additional configuration as needed
+
+---
+# [2] Secret: Redis secret (secure data like passwords)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-secret
+type: Opaque
+stringData:
+  # actually encrypted, but for convenience, k8s converts stringData
+  redis-password: "SuperSecretPassword123!"
