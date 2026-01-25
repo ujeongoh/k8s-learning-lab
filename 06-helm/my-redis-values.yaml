@@ -1,0 +1,8 @@
+# replace just this settings
+# with command : helm install my-redis bitnami/redis -f my-redis-values.yaml
+architecture: standalone
+auth:
+  password: "MySecurePassword!!"
+master:
+  persistence:
+    size: 5Gi

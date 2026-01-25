@@ -1,0 +1,64 @@
+# 1. Architecture: High Availability
+# In production, 'Standalone' is rarely used due to single point of failure.
+# Master-Replica structure for read distribution and fault tolerance.
+architecture: replication
+
+# 2. Authentication and Security
+auth:
+  # NEVER write password in plain text here! (security risk if committed to Git)
+  # Reference a pre-created kubernetes secret instead.
+  existingSecret: "redis-secret-prod"
+  existingSecretPasswordKey: "redis-password"
+
+# 3. Master node configuration (Write responsible)
+master:
+  count: 1
+  # Connect PVC to enssure data persistence even if the pod restarts
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "gp3" # Assuming we use AWS EBS etc.
+
+  # Resource constraints (Critical!)
+  # Prevents memory leaks from exhausting node resources and causing OOM kills.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m      # 1 Core
+      memory: 1Gi     # 1 GB (OOM kill occurs if exceeded)
+
+  # Pod distribution (Anti-Affinity)
+  # "Don't place Master and Replica on the same node."
+  # Prevents both from dying if one node fails.
+  podAntiAffinityPreset: hard
+
+# 4. Replica node configuration (Read responsible)
+replica:
+  replicaCount: 2     # 2 read-only replicas (total 3 nodes including master)
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# 5. Redis engine tuning (Config)
+# Policy to evict the least recently used keys when memory is full (LRU policy)
+commonConfiguration: |-
+  maxmemory-policy allkeys-lru
+  timeout 300
+  tcp-keepalive 300
+
+# 6. Monitoring (Observability)
+# Enable metrics exporter for Prometheus to scrape data.
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true     # Integrate with Prometheus Operator
+    namespace: "monitoring"
