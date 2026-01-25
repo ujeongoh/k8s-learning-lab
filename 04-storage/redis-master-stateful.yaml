@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-master
+  labels:
+    app: redis
+    role: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+      role: master
+  template:
+    metadata:
+      labels:
+        app: redis
+        role: master
+    spec:
+      # [1] allocate pod to Worker 1 (data is only on that node)
+      nodeSelector:
+        kubernetes.io/hostname: k8s-worker1
+      containers:
+      - name: master
+        image: redis:7.0.5-alpine
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 6379
+        # [2] mount container internal path (/data)
+        volumeMounts:
+        - mountPath: /data
+          name: redis-data
+      # [3] connect the PVC (storage access rights) created earlier
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-master
+  labels:
+    app: redis
+    role: master
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: redis
+    role: master
+  type: ClusterIP
