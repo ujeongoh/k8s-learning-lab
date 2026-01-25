@@ -1,0 +1,9 @@
+# Service configuration for Portainer
+# Use NodePort to enable external (Host) access.
+service:
+  type: NodePort
+  httpNodePort: 30007   # Fixed port for HTTP
+  httpsNodePort: 30008  # Fixed port for HTTPS
+
+persistence:
+  enabled: false
